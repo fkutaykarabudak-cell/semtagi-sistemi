@@ -1,0 +1,27 @@
+# render.yaml - SemtAğı Projesi için Render altyapısını tanımlar.
+
+services:
+  # Backend API için web servisi
+  - type: web
+    name: semtagi-api
+    runtime: node
+    region: frankfurt # Veritabanıyla aynı bölgeyi kullan
+    branch: main
+    # Monorepo içindeki doğru klasörü belirtiyoruz
+    rootDir: semtagi-backend
+    # Komutları, başında dizin olmadan, doğru şekilde tanımlıyoruz
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm run prisma:deploy && npm run start:prod"
+    # Ortam değişkenleri
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL
+        # Mevcut veritabanına, adını kullanarak güvenli bir şekilde bağlanıyoruz
+        fromService:
+          type: psql
+          name: semtagi-db
+          property: internalUrl
+
+# Not: 'semtagi-db' veritabanının zaten var olduğunu varsayıyoruz.
+# Bu dosya, yeni bir tane oluşturmak yerine mevcut olana bağlanır.
