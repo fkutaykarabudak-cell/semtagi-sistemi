@@ -21,7 +21,7 @@ services:
         fromService:
           type: psql
           name: semtagi-db
-          property: internalUrl
+          property: connectionString # HATA BURADAYDI: internalUrl -> connectionString olarak düzeltildi.
 
 # Not: 'semtagi-db' veritabanının zaten var olduğunu varsayıyoruz.
 # Bu dosya, yeni bir tane oluşturmak yerine mevcut olana bağlanır.
