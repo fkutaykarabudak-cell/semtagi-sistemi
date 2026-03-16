@@ -1,0 +1,179 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // "sqlite" yerine "postgresql" olarak değiştirildi
+  url      = env("DATABASE_URL") // Render.com'da tanımlanacak veritabanı URL'si
+}
+
+model User {
+  id                String       @id @default(uuid())
+  email             String       @unique
+  name              String
+  password          String
+  role              Role         @default(USER)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  orders            Order[]
+  reviews           Review[]
+  ownedRestaurant   Restaurant?  @relation("Owner")
+  managedRestaurant Restaurant?  @relation("Manager")
+  addresses         Address[]
+  notifications     Notification[]
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String   // Ev, İş yeri vb.
+  addressLine String
+  city        String
+  district    String
+  postalCode  String?
+  country     String
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+  RESTAURANT_OWNER
+  RESTAURANT_MANAGER
+}
+
+model Restaurant {
+  id              String         @id @default(uuid())
+  name            String
+  address         String
+  phone           String
+  email           String         @unique
+  latitude        Float
+  longitude       Float
+  ownerId         String         @unique
+  owner           User           @relation("Owner", fields: [ownerId], references: [id])
+  managerId       String?        @unique
+  manager         User?          @relation("Manager", fields: [managerId], references: [id])
+  status          RestaurantStatus @default(PENDING)
+  rejectionReason String?
+  minimumOrder    Float          @default(0)
+  deliveryTime    Int            // Tahmini teslimat süresi (dakika)
+  logoUrl         String?
+  coverImageUrl   String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  categories      Category[]
+  orders          Order[]
+  reviews         Review[]
+}
+
+enum RestaurantStatus {
+  PENDING   // Onay bekliyor
+  APPROVED  // Onaylandı
+  REJECTED  // Reddedildi
+  SUSPENDED // Askıya alındı
+}
+
+model Category {
+  id           String    @id @default(uuid())
+  name         String
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  products     Product[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  isAvailable Boolean  @default(true)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING      // Bekliyor
+  ACCEPTED     // Kabul edildi
+  PREPARING    // Hazırlanıyor
+  ON_THE_WAY   // Yola çıktı
+  DELIVERED    // Teslim edildi
+  CANCELLED    // İptal edildi
+}
+
+enum PaymentMethod {
+  CASH          // Nakit
+  CREDIT_CARD   // Banka kartı
+  MEAL_CARD     // Yemek kartı
+}
+
+enum DeliveryType {
+  DELIVERY  // Kurye ile teslimat
+  PICKUP    // Gel al
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  orderNumber   String        @unique // SMA-20260313-001 gibi
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId  String
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  addressId     String?
+  address       Address?      @relation(fields: [addressId], references: [id], onDelete: NoAction)
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  mealCardBrand String?       // Sodexo, Multinet, Ticket, Edenred
+  deliveryType  DeliveryType  @default(DELIVERY)
+  totalAmount   Float
+  note          String?
+  cancelReason  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: NoAction)
+  quantity  Int
+  price     Float // Sipariş anındaki ürün fiyatı
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  rating       Int        // 1-5 arası puan
+  comment      String?
+  createdAt    DateTime   @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
